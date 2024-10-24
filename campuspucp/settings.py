@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-iisuu2es5+(kci2%8g&^nn$ra!_%n=ee7*)1k(0a72(a&+4vue
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['api-campus-v2-production.up.railway.app', '127.0.0.1']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
