@@ -6,32 +6,30 @@ from bs4 import BeautifulSoup
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
 import json
-from ..utils.helpers import obtener_JSESSIONID, quitar_tildes
+from ..utils.helpers import obtener_JSESSIONID, buscar_actividad
 
 class ActividadCampusView(APIView):
     
-    def post(self, request):
-      print("PETICION POST")
+    def get(self, request):
+      print("PETICION GET")
       session = obtener_JSESSIONID();
-      body_unicode = request.body.decode('utf-8')
-      body_data = json.loads(body_unicode)
-        # Obtener el parámetro 'codigo' de la solicitud
-      nombre_actividad = body_data.get('nombre_actividad')
-      nombre_actividad = quitar_tildes(nombre_actividad)
-      
+      nombre_actividad = request.query_params.get('nombre')
+      print("NOMBRE ACTIVIDAD", nombre_actividad)
       api_url = "https://eros.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi"
-      body = {
+      api_url_admin = "https://eros.pucp.edu.pe/pucp/procinsc/piwadmin/piwadmin"
+      data = {
         "accion": "BuscarActividad",
         "comboAreaProceso": "06",
         "nombreProceso": nombre_actividad,
       }
+
+      headers = {
+         'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      }
       try:
-        print("BODY", body)
-        response = session.post(api_url, data=body)
-        print("RESPONSE", response)
-        response.raise_for_status()
-        
-        html_content = response.text
+        res = session.post(api_url, data=data, headers=headers)
+        html_content = res.text
+        print("HTML CONTENT", html_content)
         soup = BeautifulSoup(html_content, 'html.parser')
         tds = soup.find_all('td', class_='pucpCelda')
         links = soup.find_all('a', class_='pucpLinkCelda')
@@ -47,7 +45,8 @@ class ActividadCampusView(APIView):
         # Extraer los valores de 'tipoProceso' e 'identificaProceso'
         tipo_proceso = query_params.get('tipoProceso', [None])[0]
         identifica_proceso = query_params.get('identificaProceso', [None])[0]
-
+        print("TIPO PROCESO", tipo_proceso)
+        print("IDENTIFICA PROCESO", identifica_proceso)
         data = {}
         data["unidad_responsable"] = tds[2].get_text(strip=True)
         data["fecha_inicio"] = tds[3].get_text(strip=True)
@@ -60,15 +59,12 @@ class ActividadCampusView(APIView):
            "tipoProceso": tipo_proceso,
            "identificaProceso": identifica_proceso
         }
-        url_prof = "https://eros.pucp.edu.pe/pucp/procinsc/piwadmin/piwadmin"
-        query_string = urllib.parse.urlencode(search_params)
-        full_url_prof = f"{url_prof}?{query_string}"
-        print("full_url_prof", full_url_prof)
-        response_prof = session.get(full_url_prof)
-        response_prof.raise_for_status()
+        res = session.get(api_url_admin, params=search_params)
+        res.raise_for_status()
         # Encontrando todas las tablas con los atributos deseados
-        html_prof = response_prof.text
-        soup = BeautifulSoup(html_prof, 'html.parser')
+        html_content = res.text
+        print("LISTA DOCENTES", html_content)
+        soup = BeautifulSoup(html_content, 'html.parser')
         tables = soup.find_all('table', {'border': '0', 'width': '100%'})
 
         # Encuentra todas las tablas que tengan la clase "pucpTablaSubTitulo" y el ancho "100%"
@@ -130,15 +126,12 @@ class ActividadCampusView(APIView):
             result[modulos[key]["nombre"]] = guardados.pop(-1)
             
 
-        url_datos = "https://eros.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi"
         search_params = {
            "accion": "AbrirActividadDatosGenerales",
            "tipoProceso": tipo_proceso,
            "identificaProceso": identifica_proceso
         }
-        query_string = urllib.parse.urlencode(search_params)
-        full_url_datos = f"{url_datos}?{query_string}"
-        response_datos = session.get(full_url_datos)
+        response_datos = session.get(api_url, params=search_params)
         response_datos.raise_for_status()
         html_datos = response_datos.text
         soup_datos = BeautifulSoup(html_datos, 'html.parser')
@@ -180,9 +173,7 @@ class ActividadCampusView(APIView):
            "tipoProceso": tipo_proceso,
            "identificaProceso": identifica_proceso
         }
-        query_string = urllib.parse.urlencode(search_params)
-        full_url_datos = f"{url_datos}?{query_string}"
-        response_datos = session.get(full_url_datos)
+        response_datos = session.get(api_url, params=search_params)
         response_datos.raise_for_status()
         html_datos = response_datos.text
         soup = BeautifulSoup(html_datos, 'html.parser')
@@ -210,3 +201,60 @@ class ActividadCampusView(APIView):
         return Response({**data, "modulos": result, **results, "claves": claves}, status=status.HTTP_200_OK)
       except requests.exceptions.RequestException as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+      
+class ObtenerVacantesView(APIView):
+   def get(self, request):
+      session = obtener_JSESSIONID();
+      nombre_actividad = request.query_params.get('nombre')
+      api_url = "https://eros.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi"
+      api_url_admin = "https://eros.pucp.edu.pe/pucp/procinsc/piwadmin/piwadmin"
+      data = {
+        "accion": "BuscarActividad",
+        "comboAreaProceso": "06",
+        "nombreProceso": nombre_actividad,
+      }
+
+      headers = {
+         'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      }
+      try:
+        res = session.post(api_url, data=data, headers=headers)
+        html_content = res.text
+        codigos = buscar_actividad(html_content)
+        # https://ares.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi?accion=ConsultarDatosActividad&tipoProceso=090&identificaProceso=909
+        search_params = {
+           "accion": "ConsultarDatosActividad",
+           "tipoProceso": codigos["tipo_proceso"],
+           "identificaProceso": codigos["identifica_proceso"]
+        }
+        res = session.get(api_url, params=search_params)
+        html_content = res.text
+        # Analizar el contenido HTML con BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Encontrar la tabla específica. En este caso, asumimos que es la única tabla con border="0" y width="100%"
+        tabla = soup.find('table', attrs={'border': '0', 'width': '100%'})
+
+        # Verificar si se encontró la tabla
+        if not tabla:
+            print("No se encontró la tabla especificada.")
+            exit()
+
+        # Extraer las filas de la tabla
+        filas = tabla.find_all('tr')
+
+        # Lista para almacenar los datos extraídos
+        datos = []
+
+        # Iterar sobre las filas, omitiendo la fila de encabezado
+        for fila in filas[1:]:  # Saltamos el encabezado
+            celdas = fila.find_all('td')
+            if len(celdas) >= 3:
+                # Extraer el texto de cada celda, eliminando espacios en blanco
+                metrica = celdas[1].get_text(strip=True)
+                cantidad = celdas[2].get_text(strip=True)
+                datos.append({'Métrica': metrica, 'Cantidad': cantidad})
+        return Response(datos, status=status.HTTP_200_OK)
+      except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

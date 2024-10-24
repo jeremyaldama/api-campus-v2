@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from rest_framework.response import Response
 from rest_framework import status
 import urllib.parse
+from urllib.parse import urlparse, parse_qs
 # In your settings or function where you need credentials
 from decouple import config
 
@@ -111,3 +112,110 @@ def quitar_tildes(texto):
     # Elimina los caracteres acentuados (diacríticos)
     texto_sin_tildes = ''.join(c for c in texto_normalizado if unicodedata.category(c) != 'Mn')
     return texto_sin_tildes
+
+
+def get_all_form_values(form):
+    # Crear la lista de tuplas para almacenar los datos del formulario
+    form_data = []
+
+    # Recorrer todos los campos 'input'
+    for input_tag in form.find_all('input'):
+        input_name = input_tag.get('name')
+        input_value = input_tag.get('value', '')  # Si no tiene valor, asignar cadena vacía
+
+        # Agregar cada par (name, value) como una tupla en la lista
+        if input_name:  # Asegurarse de que el input tenga nombre
+            form_data.append((input_name, input_value))
+
+    # Manejar `select` (comboboxes)
+    for select_tag in form.find_all('select'):
+        select_name = select_tag.get('name')
+        selected_options = select_tag.find_all('option', selected=True)
+
+        if select_name:
+            # Si es un combobox con múltiples opciones seleccionadas
+            if select_tag.has_attr('multiple'):
+                for option in selected_options:
+                    form_data.append((select_name, option.get('value')))
+            else:
+                # Si es un combobox con una sola opción seleccionada
+                if selected_options:
+                    form_data.append((select_name, selected_options[0].get('value')))
+    return form_data
+
+def modify_form_data(form_data):
+    # Helper functions to find index of a tuple based on the key
+    def get_tuple_index(key):
+        for index, (name, _) in enumerate(form_data):
+            if name == key:
+                return index
+        return None
+
+    # Helper function to update the value of a tuple
+    def update_tuple_value(key, new_value):
+        index = get_tuple_index(key)
+        if index is not None:
+            form_data[index] = (key, new_value)
+        else:
+            form_data.append((key, new_value))
+
+    # fValidarDatosGenerales logic
+    mensaje_usosiete_index = get_tuple_index("mensajeusosiete")
+    if mensaje_usosiete_index is not None and form_data[mensaje_usosiete_index][1] != '':
+        usosiete_index = get_tuple_index("usosiete")
+        if usosiete_index is not None and form_data[usosiete_index][1] == 'checked':
+            update_tuple_value("indusosiete", '1')
+        else:
+            update_tuple_value("indusosiete", '0')
+
+    codigo_index = get_tuple_index("codigo")
+    if codigo_index is not None and form_data[codigo_index][1] != '':
+        update_tuple_value("accion", 'AgregarInscDatosGenerales')
+        update_tuple_value("inscradmin", '1')
+
+        cod_resultado_index = get_tuple_index("codResultado")
+        if cod_resultado_index is not None and form_data[cod_resultado_index][1] == form_data[codigo_index][1]:
+            pass  # Simulate form submission
+        else:
+            print("El código de búsqueda no coincide con los datos generales completados. Presionar el botón Buscar.")
+    else:
+        # Assuming fValidar() returns '1'
+        if get_tuple_index("nacdia_txt") and get_tuple_index("nacmes_txt") and get_tuple_index("nacano_txt"):
+            nacdia = form_data[get_tuple_index("nacdia_txt")][1]
+            nacmes = form_data[get_tuple_index("nacmes_txt")][1]
+            nacano = form_data[get_tuple_index("nacano_txt")][1]
+            update_tuple_value("fechaNac", f"{nacdia}/{nacmes}/{nacano}")
+
+        if not valida_fecha(form_data[get_tuple_index("fechaNac")][1]):
+            update_tuple_value("fechaNac", "")
+        
+        update_tuple_value("accion", 'AgregarInscDatosGenerales')
+        update_tuple_value("inscradmin", '1')
+    return form_data
+
+# Helper functions to simulate validation (to be implemented as needed)
+def valida_fecha(fecha):
+    # Here you'd implement date validation logic; returning True if valid
+    return True  # For simplicity, assume all dates are valid
+
+def valida_numero(numero):
+    # Check if the string is all digits
+    return numero.isdigit()
+
+def buscar_actividad(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    tds = soup.find_all('td', class_='pucpCelda')
+    links = soup.find_all('a', class_='pucpLinkCelda')
+
+    link=links[0]['href']
+    print("LINK" + link)
+    # Analizar la URL
+    parsed_url = urlparse(link)
+
+    # Analizar la cadena de consulta
+    query_params = parse_qs(parsed_url.query)
+
+    # Extraer los valores de 'tipoProceso' e 'identificaProceso'
+    tipo_proceso = query_params.get('tipoProceso', [None])[0]
+    identifica_proceso = query_params.get('identificaProceso', [None])[0]
+    return {"tipo_proceso": tipo_proceso, "identifica_proceso": identifica_proceso}

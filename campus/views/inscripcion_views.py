@@ -93,8 +93,9 @@ class InscripcionCampusView(APIView):
       }
       res = session.post(url_agregar_inscritos, data=datos_inscripcion)
       res.raise_for_status()
+      # res.encoding = 'utf-8' 
       html = res.text
-      # print("HTML 1 AGREGAR", html)
+      print("HTML 1 AGREGAR", html)
       soup = BeautifulSoup(html, 'html.parser')
       # Extraer los valores de los campos que necesitas
       dni = soup.find('input', {'name': 'dni'})['value'] if soup.find('input', {'name': 'dni'}) else ""
@@ -138,6 +139,7 @@ class InscripcionCampusView(APIView):
       }
       print("DATOS INSCRIPCION GENERALES", datos_inscripcion_generales)
       res = session.post(url_agregar_inscritos, data=datos_inscripcion_generales)
+      res.encoding = 'utf-8' 
       # print("HTML 2 AGREGAR", res.text)
       url_crear_inscritos_datos_principales = f"https://eros.pucp.edu.pe/pucp/procinsc/piwinscr/piwinscr?accion=CrearInscDatosPrincipales&codigo={codigo}&tipoproceso={tipo_proceso}&identificaproceso={identifica_proceso}&inscradmin=1"
 
@@ -151,107 +153,56 @@ class InscripcionCampusView(APIView):
 
       res = session.get(url_crear_inscritos_datos_principales, data=datos_inscripcion_principales)
       res.raise_for_status()
+      # res.encoding = 'utf-8'
       html = res.text
       # print("HTML 3 AGREGAR", html)
       soup = BeautifulSoup(html, 'html.parser')
-      form = soup.find('form', {"nombre": "formPreinscripcion"})
-      # Inicializar el diccionario con los campos requeridos
-      form_data = {
-        "cis": "",
-        "fechaActual": "",
-        "accion": "AgregarInscDatosPrincipales",
-        "correosxUso": "",
-        "refrescar": "",
-        "continuar": "",
-        "editar": "",
-        "session": "",
-        "noInscrito": "",
-        "codigo": "",
-        "tipoproceso": "",
-        "identificaproceso": "",
-        "aquielfoco": "",
-        "generarcodigo": "",
-        "esNuevo": "",
-        "migracion": "",
-        "nombForm": "",
-        "nombreCmbNacionalidad": "",
-        "nombreCmbTipoDocumento": "",
-        "nombreCmbPaisEmision": "",
-        "tieneDocumento": "",
-        "cambioRegAFP": "",
-        "apepaterno": "",
-        "indobligaapepaterno": "",
-        "apematerno": "",
-        "indobligaapematerno": "",
-        "nombres": "",
-        "indobliganombres": "",
-        "nacdia_txt": "",
-        "nacmes_txt": "",
-        "nacano_txt": "",
-        "indobligafechanac": "",
-        "nacionalidad": "",
-        "nacionalidad_txt": "",
-        "indobliganacionalidad": "",
-        "paisnac": "",
-        "paisnac_txt": "",
-        "indobligapaisnac": "",
-        "departnac": "",
-        "departnac_txt": "",
-        "provinac": "",
-        "provinac_txt": "",
-        "distrinac": "",
-        "distrinac_txt": "",
-        "sexo_txt": "",
-        "indobligasexo": "",
-        "cmbTipoDocumento": "",
-        "cmbPaisEmision": "",
-        "indobligadni": "",
-        "indgrupoobligdni": "",
-        "docIdentidad": "",
-        "correopucp": "",
-        "etiqcorreo": "",
-        "correo": "",
-        "correoEditable": "",
-        "indobligacorreo": "",
-        "indgrupoobligcorreo": "",
-        "etiqtelefono": "",
-        "telefono": "",
-        "indobligatelefono": "",
-        "indgrupoobligtelefono": "",
-        "etiqcelular": "",
-        "celular": "",
-        "indobligacelular": "",
-        "indgrupoobligcelular": "",
-        "paisresi": "",
-        "indobligapaisresi": "",
-        "departresi": "",
-        "proviresi": "",
-        "distriresi": "",
-        "indobligapariente": "",
-        "parentesco": "",
-        "parentesco": "",
-        "apepatpariente": "",
-        "apematpariente": "",
-        "nombpariente": "",
-        "telefonopar": "",
-        "correopar": "",
-        "indApoderado": "",
-        "indEgresadoPucp": "",
-        "indobligaApoderado": "",
-        "inscradmin": ""
+      form = soup.find("form", {"name": "formPreinscripcion"})
+      # print("FORMMMMM", form)
+      # Crear la lista de tuplas para almacenar los datos del formulario
+      form_data = []
+
+      # Recorrer todos los campos 'input'
+      for input_tag in form.find_all('input'):
+        input_name = input_tag.get('name')
+        input_value = input_tag.get('value', '')  # Si no tiene valor, asignar cadena vacía
+
+        # Agregar cada par (name, value) como una tupla en la lista
+        if input_name:  # Asegurarse de que el input tenga nombre
+          form_data.append((input_name, input_value))
+
+      # Manejar `select` (comboboxes)
+      for select_tag in form.find_all('select'):
+        select_name = select_tag.get('name')
+        selected_options = select_tag.find_all('option', selected=True)
+
+        if select_name:
+          # Si es un combobox con múltiples opciones seleccionadas
+          if select_tag.has_attr('multiple'):
+            for option in selected_options:
+              form_data.append((select_name, option.get('value')))
+          else:
+            # Si es un combobox con una sola opción seleccionada
+            if selected_options:
+              form_data.append((select_name, selected_options[0].get('value')))
+      # Actualizar la tupla con el campo 'accion'
+      for i, (name, value) in enumerate(form_data):
+        if name == 'accion':
+          # Reemplazar la tupla existente con la nueva tupla modificada
+          form_data[i] = ('accion', 'AgregarInscDatosPrincipales')
+      # Imprimir los datos extraídos del formulario
+      print("FORM DATA:", form_data)
+      # Establecer los encabezados para asegurar que se envían correctamente en UTF-8
+      headers = {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       }
-      # Extraer los valores de los campos de entrada
-      for input_tag in soup.find_all('input'):
-        name = input_tag.get('name')
-        value = input_tag.get('value', "")
-        
-        # Si el campo existe en el diccionario, actualiza su valor
-        if name in form_data and name != "accion":
-          form_data[name] = value
-      print("FORM DATA", form_data)
-      res = session.post(url_agregar_inscritos, data=form_data)
+
+      # Enviar los datos usando requests.post
+      res = session.post(url_agregar_inscritos, data=form_data, headers=headers)
       res.raise_for_status()
+      res.encoding = 'utf-8' 
       html = res.text
+
       # print("HTML 4 AGREGAR", html)
-    print(res.text)
+    # print(res.text)
     return Response("Matrícula exitosa", status=status.HTTP_200_OK)
