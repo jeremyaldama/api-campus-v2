@@ -8,14 +8,14 @@ from urllib.parse import urlparse, parse_qs
 # In your settings or function where you need credentials
 from decouple import config
 
-USERNAME = config('USER')
+USERNAMEC = config('USERC')
 PASSWORD = config('PASSWORD')
 
 def obtener_JSESSIONID():
     res = requests.get("https://pandora.pucp.edu.pe/pucp/login?TARGET=https%3A%2F%2Feros.pucp.edu.pe%2Fpucp%2Fjsp%2FIntranet.jsp")
     # Crear una instancia de BeautifulSoup
     soup = BeautifulSoup(res.text, 'html.parser')
-    print("USERNAME AND PASSWORD", USERNAME, PASSWORD)
+    print("USERNAME AND PASSWORD", USERNAMEC, PASSWORD)
     # Encontrar el input con name="execution"
     execution_input = soup.find('input', {'name': 'execution'})
 
@@ -24,7 +24,7 @@ def obtener_JSESSIONID():
 
     session = requests.Session()
     payload = {
-        "username": USERNAME,
+        "username": USERNAMEC,
         "password": PASSWORD,
         "execution": execution_value,
         "_eventId": "submit",
