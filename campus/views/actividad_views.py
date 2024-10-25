@@ -210,7 +210,7 @@ class ObtenerVacantesView(APIView):
       api_url_admin = "https://eros.pucp.edu.pe/pucp/procinsc/piwadmin/piwadmin"
       data = {
         "accion": "BuscarActividad",
-        "nombreProceso": "DEC Modificación de datos de participantes",
+        "nombreProceso": "AD-XVII Programa de Certificación en Women Development 2024-03",
       }
 
       headers = {
@@ -219,7 +219,7 @@ class ObtenerVacantesView(APIView):
       try:
         datos = []
         vacantes_1 = obtener_datos_vacantes_actividad(session, api_url, headers, **data)
-        datos.append({"nombre_curso": "DEC Modificación de datos de participantes" + " - Vacantes " + vacantes_1})
+        datos.append({"nombre_curso": "AD-XVII Programa de Certificación en Women Development 2024-03" + " - Vacantes " + vacantes_1})
 
         data = {
           "accion": "BuscarActividad",
