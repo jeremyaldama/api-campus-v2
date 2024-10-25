@@ -210,7 +210,6 @@ class ObtenerVacantesView(APIView):
       api_url_admin = "https://eros.pucp.edu.pe/pucp/procinsc/piwadmin/piwadmin"
       data = {
         "accion": "BuscarActividad",
-        "comboAreaProceso": "06",
         "nombreProceso": "DEC Modificación de datos de participantes",
       }
 

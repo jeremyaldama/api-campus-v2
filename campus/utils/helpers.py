@@ -225,6 +225,7 @@ def obtener_datos_vacantes_actividad(session, api_url, headers, **data):
         res = session.post(api_url, data=data, headers=headers)
         res.raise_for_status()
         html_content = res.text
+        print("HTML CONTENT", html_content)
         codigos = buscar_actividad(html_content)
         # https://ares.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi?accion=ConsultarDatosActividad&tipoProceso=090&identificaProceso=909
         search_params = {
