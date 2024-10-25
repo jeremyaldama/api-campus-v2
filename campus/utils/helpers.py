@@ -219,3 +219,46 @@ def buscar_actividad(html):
     tipo_proceso = query_params.get('tipoProceso', [None])[0]
     identifica_proceso = query_params.get('identificaProceso', [None])[0]
     return {"tipo_proceso": tipo_proceso, "identifica_proceso": identifica_proceso}
+
+def obtener_datos_vacantes_actividad(session, api_url, headers, **data):
+    try:
+        res = session.post(api_url, data=data, headers=headers)
+        res.raise_for_status()
+        html_content = res.text
+        codigos = buscar_actividad(html_content)
+        # https://ares.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi?accion=ConsultarDatosActividad&tipoProceso=090&identificaProceso=909
+        search_params = {
+            "accion": "ConsultarDatosActividad",
+            "tipoProceso": codigos["tipo_proceso"],
+            "identificaProceso": codigos["identifica_proceso"]
+        }
+        res = session.get(api_url, params=search_params)
+        html_content = res.text
+        # Analizar el contenido HTML con BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Encontrar la tabla específica. En este caso, asumimos que es la única tabla con border="0" y width="100%"
+        tabla = soup.find('table', attrs={'border': '0', 'width': '100%'})
+
+        # Verificar si se encontró la tabla
+        if not tabla:
+            print("No se encontró la tabla especificada.")
+            exit()
+
+        # Extraer las filas de la tabla
+        filas = tabla.find_all('tr')
+
+        # Lista para almacenar los datos extraídos
+        datos = []
+
+        # Iterar sobre las filas, omitiendo la fila de encabezado
+        for fila in filas[1:]:  # Saltamos el encabezado
+            celdas = fila.find_all('td')
+            if len(celdas) >= 3:
+                # Extraer el texto de cada celda, eliminando espacios en blanco
+                metrica = celdas[1].get_text(strip=True)
+                cantidad = celdas[2].get_text(strip=True)
+                datos.append({'Métrica': metrica, 'Cantidad': cantidad})
+        return datos[3]["Cantidad"]
+    except requests.RequestException as e:
+        exit()

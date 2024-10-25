@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
 import json
-from ..utils.helpers import obtener_JSESSIONID, buscar_actividad
+from ..utils.helpers import obtener_JSESSIONID, buscar_actividad, obtener_datos_vacantes_actividad
 
 class ActividadCampusView(APIView):
     
@@ -211,49 +211,33 @@ class ObtenerVacantesView(APIView):
       data = {
         "accion": "BuscarActividad",
         "comboAreaProceso": "06",
-        "nombreProceso": nombre_actividad,
+        "nombreProceso": "TALLER DE TEATRO Y EXPRESIÓN CREATIVA 2024-03",
       }
 
       headers = {
          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
       }
       try:
-        res = session.post(api_url, data=data, headers=headers)
-        html_content = res.text
-        codigos = buscar_actividad(html_content)
-        # https://ares.pucp.edu.pe/pucp/procinsc/piwconfi/piwconfi?accion=ConsultarDatosActividad&tipoProceso=090&identificaProceso=909
-        search_params = {
-           "accion": "ConsultarDatosActividad",
-           "tipoProceso": codigos["tipo_proceso"],
-           "identificaProceso": codigos["identifica_proceso"]
-        }
-        res = session.get(api_url, params=search_params)
-        html_content = res.text
-        # Analizar el contenido HTML con BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
-
-        # Encontrar la tabla específica. En este caso, asumimos que es la única tabla con border="0" y width="100%"
-        tabla = soup.find('table', attrs={'border': '0', 'width': '100%'})
-
-        # Verificar si se encontró la tabla
-        if not tabla:
-            print("No se encontró la tabla especificada.")
-            exit()
-
-        # Extraer las filas de la tabla
-        filas = tabla.find_all('tr')
-
-        # Lista para almacenar los datos extraídos
         datos = []
+        vacantes_1 = obtener_datos_vacantes_actividad(session, api_url, headers, **data)
+        datos.append({"nombre_curso": "TALLER DE TEATRO Y EXPRESIÓN CREATIVA 2024-03" + " - Vacantes " + vacantes_1})
 
-        # Iterar sobre las filas, omitiendo la fila de encabezado
-        for fila in filas[1:]:  # Saltamos el encabezado
-            celdas = fila.find_all('td')
-            if len(celdas) >= 3:
-                # Extraer el texto de cada celda, eliminando espacios en blanco
-                metrica = celdas[1].get_text(strip=True)
-                cantidad = celdas[2].get_text(strip=True)
-                datos.append({'Métrica': metrica, 'Cantidad': cantidad})
+        data = {
+          "accion": "BuscarActividad",
+          "comboAreaProceso": "06",
+          "nombreProceso": "CI-MM-OCT-24 CURSO DE CAPACITACIÓN EN POWER AUTOMATE NIVEL BÁSICO 2024-01",
+        }
+        vacantes_2 = obtener_datos_vacantes_actividad(session, api_url, headers, **data)
+        datos.append({"nombre_curso": "CI-MM-OCT-24 CURSO DE CAPACITACIÓN EN POWER AUTOMATE NIVEL BÁSICO 2024-01" + " - Vacantes " + vacantes_2})
+
+        data = {
+          "accion": "BuscarActividad",
+          "comboAreaProceso": "06",
+          "nombreProceso": "TALLER DE TEATRO Y EXPRESIÓN CREATIVA 2024-03",
+        }
+        vacantes_3 = obtener_datos_vacantes_actividad(session, api_url, headers, **data)
+        datos.append({"nombre_curso": "TALLER DE TEATRO Y EXPRESIÓN CREATIVA 2024-03" + " - Vacantes " + vacantes_3})
+
         return Response({"data": datos}, status=status.HTTP_200_OK)
       except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
