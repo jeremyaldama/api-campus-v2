@@ -254,7 +254,7 @@ class ObtenerVacantesView(APIView):
                 metrica = celdas[1].get_text(strip=True)
                 cantidad = celdas[2].get_text(strip=True)
                 datos.append({'Métrica': metrica, 'Cantidad': cantidad})
-        return Response(datos, status=status.HTTP_200_OK)
+        return Response({"data": datos}, status=status.HTTP_200_OK)
       except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
