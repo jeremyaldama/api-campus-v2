@@ -211,7 +211,7 @@ class ObtenerVacantesView(APIView):
       data = {
         "accion": "BuscarActividad",
         "comboAreaProceso": "06",
-        "nombreProceso": "SS-VII PROGRAMA DE ESPECIALIZACIÓN EN LIDERAZGO Y GERENCIA DE LA FELICIDAD 2024-01",
+        "nombreProceso": "DEC Modificación de datos de participantes",
       }
 
       headers = {
@@ -220,7 +220,7 @@ class ObtenerVacantesView(APIView):
       try:
         datos = []
         vacantes_1 = obtener_datos_vacantes_actividad(session, api_url, headers, **data)
-        datos.append({"nombre_curso": "SS-VII PROGRAMA DE ESPECIALIZACIÓN EN LIDERAZGO Y GERENCIA DE LA FELICIDAD 2024-01" + " - Vacantes " + vacantes_1})
+        datos.append({"nombre_curso": "DEC Modificación de datos de participantes" + " - Vacantes " + vacantes_1})
 
         data = {
           "accion": "BuscarActividad",
